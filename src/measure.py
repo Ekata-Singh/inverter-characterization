@@ -23,3 +23,16 @@ def measure_delay(cload_ff, slew_ps, vdd=VDD):
     if missing:
         raise RuntimeError(f"Measurements {sorted(missing)} missing at {cload_ff} fF, {slew_ps} ps")
     return results["tphl"] * 1e12, results["tplh"] * 1e12
+
+
+def measure_leakage(input_high, vdd=VDD):
+    """Return static leakage power in nW with the input held high or low."""
+    netlist = fill_template(
+        NETLIST_DIR / "leakage.cir.tpl",
+        {"VDD": vdd, "VIN": vdd if input_high else 0},
+    )
+    results = run_netlist(netlist)
+    if "ileak" not in results:
+        raise RuntimeError("Leakage measurement 'ileak' missing from ngspice output")
+    # The supply sources current, so the reported value is negative; power is |I| * VDD.
+    return abs(results["ileak"]) * vdd * 1e9
